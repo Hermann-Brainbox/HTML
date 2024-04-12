@@ -11,17 +11,26 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Vérifie la dernière version du code source depuis GitHub
-                sh "git clone https://github.com/Hermann-Brainbox/HTML.git"
+                script {
+                    // Supprimer le dernier répertoire cloné (s'il existe)
+                    sh "rm -rf HTML"
+
+                    // Cloner le dépôt depuis GitHub
+                    sh "git clone https://github.com/Hermann-Brainbox/HTML.git"
+                    }
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Crée l'image Docker et la tague avec la version spécifiée.
-                    def imageTag = "${DOCKER_IMAGE}:v2"
-                    sh "docker build -t ${imageTag} ."
+                    // Chemin vers le répertoire contenant le Dockerfile
+                    dir('HTML') {
+                        // Créer l'image Docker et la taguer avec la version spécifiée.
+                        def imageTag = "${DOCKER_IMAGE}:v3"
+                        sh "docker build -t ${imageTag} ."
+                    }
                 }
             }
         }
@@ -35,7 +44,7 @@ pipeline {
                     }
                     
                     // Pousser l'image Docker vers le registre.
-                    def imageTag = "${DOCKER_IMAGE}:v2"
+                    def imageTag = "${DOCKER_IMAGE}:v3"
                     sh "docker push ${imageTag}"
                 }
             }
@@ -44,11 +53,11 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Appliquer le fichier de configuration Kubernetes depuis le répertoire `manifest` situé dans l'espace de travail Jenkins.
-                    def manifestFilePath = "${MANIFEST_DIR}/."
-                    //withEnv(["KUBECONFIG=${KUBE_CONFIG}"]) {
-                        sh "kubectl apply -f ${manifestFilePath}"
-                    }
+                    // Appliquer le fichier de configuration Kubernetes depuis le répertoire `manifest`
+                    def manifestFilePath = "${MANIFEST_DIR}/." // Remplacez `your-k8s-manifest.yaml` par le nom de votre fichier YAML
+
+                    // Appliquer le fichier YAML
+                    sh "kubectl apply -f ${manifestFilePath}"
                 }
             }
         }
