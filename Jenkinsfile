@@ -4,13 +4,15 @@ pipeline {
     environment {
         // Définition de l'image Docker à utiliser.
         DOCKER_IMAGE = "solofonore/hermann"
+        // Chemin complet vers le répertoire des manifests Kubernetes.
+        MANIFEST_DIR = '/var/jenkins_home/workspace/ops/manifest'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Clone le dépôt depuis GitHub
-                  sh "git clone https://github.com/Hermann-Brainbox/HTML.git"
+                // Vérifie la dernière version du code source depuis GitHub
+                sh "git clone https://github.com/Hermann-Brainbox/HTML.git"
             }
         }
 
@@ -35,6 +37,18 @@ pipeline {
                     // Pousser l'image Docker vers le registre.
                     def imageTag = "${DOCKER_IMAGE}:v2"
                     sh "docker push ${imageTag}"
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    // Appliquer le fichier de configuration Kubernetes depuis le répertoire `manifest` situé dans l'espace de travail Jenkins.
+                    def manifestFilePath = "${MANIFEST_DIR}/."
+                    //withEnv(["KUBECONFIG=${KUBE_CONFIG}"]) {
+                        sh "kubectl apply -f ${manifestFilePath}"
+                    }
                 }
             }
         }
