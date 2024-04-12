@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Définition de l'image Docker à utiliser.
-        DOCKER_IMAGE = "solofonore/hermann"
+        DOCKER_IMAGE = "solofonore/hermann:v2"
         // Chemin complet vers le répertoire des manifests Kubernetes.
         MANIFEST_DIR = '/var/jenkins_home/workspace/ops/manifest'
     }
@@ -14,10 +14,8 @@ pipeline {
                 script {
                     // Supprimer le dernier répertoire cloné (s'il existe)
                     sh "rm -rf HTML"
-
                     // Cloner le dépôt depuis GitHub
                     sh "git clone https://github.com/Hermann-Brainbox/HTML.git"
-                    }
                 }
             }
         }
@@ -25,11 +23,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Chemin vers le répertoire contenant le Dockerfile
                     dir('HTML') {
-                        // Créer l'image Docker et la taguer avec la version spécifiée.
-                        def imageTag = "${DOCKER_IMAGE}:v3"
-                        sh "docker build -t ${imageTag} ."
+                        // Construire l'image Docker et la taguer avec la version spécifiée.
+                        sh "docker build -t ${DOCKER_IMAGE} ."
                     }
                 }
             }
@@ -42,10 +38,9 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
                     }
-                    
+
                     // Pousser l'image Docker vers le registre.
-                    def imageTag = "${DOCKER_IMAGE}:v3"
-                    sh "docker push ${imageTag}"
+                    sh "docker push ${DOCKER_IMAGE}"
                 }
             }
         }
@@ -53,11 +48,13 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Appliquer le fichier de configuration Kubernetes depuis le répertoire `manifest`
-                    def manifestFilePath = "${MANIFEST_DIR}/." // Remplacez `your-k8s-manifest.yaml` par le nom de votre fichier YAML
+                    // Appliquer le fichier de configuration Kubernetes.
+                    def manifestFilePath = "${MANIFEST_DIR}/deploye.yaml" // Remplacez `your-k8s-manifest.yaml` par le nom de votre fichier YAML
+                     def manifestFilePath1 = "${MANIFEST_DIR}/service.yaml"
 
                     // Appliquer le fichier YAML
                     sh "kubectl apply -f ${manifestFilePath}"
+                    sh "kubectl apply -f ${manifestFilePath1}"
                 }
             }
         }
@@ -65,10 +62,10 @@ pipeline {
 
     post {
         always {
-            // Nettoyage des ressources : déconnexion du registre Docker.
             script {
+                // Nettoyage des ressources : déconnexion du registre Docker.
                 sh "docker logout"
             }
         }
     }
-
+}
